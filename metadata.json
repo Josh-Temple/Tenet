@@ -1,0 +1,6 @@
+{
+  "name": "Tenet",
+  "description": "A trading journal and review application focusing on entry plans, rules compliance, and post-trade evaluation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
