@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../repository/db';
-import { TradeDirection, ChecklistStatus } from '../types';
+import { TradeDirection, ChecklistStatus, Instrument } from '../types';
 import { checkEntryPriceConsistency, calculateExpectedRiskReward } from '../utils/calculations';
 import { AlertCircle, FileEdit } from 'lucide-react';
 import { clsx } from 'clsx';
 import { v4 as uuidv4 } from 'uuid';
+import { DEFAULT_INSTRUMENT_CODE, instrumentRepository, normalizeInstrumentCode } from '../repository/InstrumentRepository';
 
 export default function TradeForm() {
   const navigate = useNavigate();
   const [tradeId, setTradeId] = useState<string>(uuidv4());
   
-  const [symbol, setSymbol] = useState('');
+  const [symbol, setSymbol] = useState(DEFAULT_INSTRUMENT_CODE);
+  const [activeInstruments, setActiveInstruments] = useState<Instrument[]>([]);
   const [direction, setDirection] = useState<TradeDirection>('BUY');
   const [entryPrice, setEntryPrice] = useState<string>('');
   const [stopLoss, setStopLoss] = useState<string>('');
@@ -35,10 +37,24 @@ export default function TradeForm() {
   useEffect(() => {
     let mounted = true;
     const loadDraft = async () => {
-      const draft = await db.trades.where('status').equals('Draft').first();
-      if (mounted && draft) {
+      await instrumentRepository.ensureInitialInstruments();
+      const [draft, active, settings] = await Promise.all([
+        db.trades.where('status').equals('Draft').first(),
+        instrumentRepository.getActive(),
+        db.settings.toCollection().first(),
+      ]);
+      if (!mounted) return;
+
+      setActiveInstruments(active);
+      const initialSymbol = resolveInitialTradeSymbol({
+        draftSymbol: draft?.symbol,
+        defaultSymbol: settings?.defaultSymbol,
+        activeInstruments: active,
+      });
+      setSymbol(initialSymbol);
+
+      if (draft) {
         setTradeId(draft.id);
-        setSymbol(draft.symbol);
         setDirection(draft.direction);
         setEntryPrice(draft.plan?.plannedEntryPrice?.toString() || '');
         setStopLoss(draft.plan?.plannedStopLoss?.toString() || '');
@@ -57,7 +73,7 @@ export default function TradeForm() {
         setStopLossLogicMemo(draft.plan?.freeMemo || '');
         setScenarioMemo(draft.plan?.basicScenario || '');
       }
-      setIsInitializing(false);
+      if (mounted) setIsInitializing(false);
     };
     loadDraft();
     return () => { mounted = false; };
@@ -67,7 +83,8 @@ export default function TradeForm() {
     if (isInitializing) return;
     
     // Check if we have anything to save (at least one field edited)
-    if (!symbol && !entryPrice && !stopLoss && !takeProfit && Object.values(checks).every(v => v === 'Unanswered') && !stopLossLogicMemo && !scenarioMemo) {
+    const normalizedSymbol = normalizeInstrumentCode(symbol);
+    if (!normalizedSymbol && !entryPrice && !stopLoss && !takeProfit && Object.values(checks).every(v => v === 'Unanswered') && !stopLossLogicMemo && !scenarioMemo) {
        return; 
     }
 
@@ -77,7 +94,7 @@ export default function TradeForm() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
-      symbol: symbol,
+      symbol: normalizedSymbol,
       direction: direction,
       session: 'Tokyo',
       status: 'Draft',
@@ -126,6 +143,12 @@ export default function TradeForm() {
       warningAcknowledged = true;
     }
 
+    const normalizedSymbol = normalizeInstrumentCode(symbol);
+    if (!normalizedSymbol || normalizedSymbol === 'UNSET') {
+      alert('Please select a valid symbol.');
+      return;
+    }
+
     const existingId = tradeId;
     const tradeData: any = {
       id: existingId,
@@ -133,7 +156,7 @@ export default function TradeForm() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
-      symbol: symbol || 'UNSET', // required
+      symbol: normalizedSymbol,
       direction: direction,
       session: 'Tokyo',
       status: 'Plan Confirmed',
@@ -178,13 +201,15 @@ export default function TradeForm() {
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-1">
             <label className="block text-[10px] font-mono text-zinc-400 tracking-widest uppercase">Symbol</label>
-            <input 
-               type="text" 
-               value={symbol} 
-               onChange={e => setSymbol(e.target.value.toUpperCase())}
-               className="w-full bg-transparent border-b border-zinc-200 py-2 text-2xl font-medium focus:border-violet-600 outline-none transition-colors rounded-none placeholder-zinc-300"
-               placeholder="BTCUSD"
-            />
+            <select
+               value={symbol}
+               onChange={e => setSymbol(e.target.value)}
+               className="w-full bg-transparent border-b border-zinc-200 py-2 text-xl font-medium focus:border-violet-600 outline-none transition-colors rounded-none"
+            >
+              {buildInstrumentOptions(activeInstruments, symbol).map(option => (
+                <option key={option.code} value={option.code}>{option.label}</option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1">
             <label className="block text-[10px] font-mono text-zinc-400 tracking-widest uppercase">Direction</label>
@@ -360,3 +385,28 @@ function ChecklistRow({ label, value, onChange, noSeparator = false }: { label: 
     );
 }
 
+
+export function resolveInitialTradeSymbol({ draftSymbol, defaultSymbol, activeInstruments }: { draftSymbol?: string; defaultSymbol?: string; activeInstruments: Instrument[] }): string {
+  const activeCodes = new Set(activeInstruments.filter(instrument => instrument.isActive).map(instrument => instrument.code));
+  const normalizedDraftSymbol = draftSymbol ? normalizeInstrumentCode(draftSymbol) : '';
+  if (normalizedDraftSymbol) return normalizedDraftSymbol;
+
+  const normalizedDefaultSymbol = defaultSymbol ? normalizeInstrumentCode(defaultSymbol) : '';
+  if (normalizedDefaultSymbol && activeCodes.has(normalizedDefaultSymbol)) return normalizedDefaultSymbol;
+  if (activeCodes.has(DEFAULT_INSTRUMENT_CODE)) return DEFAULT_INSTRUMENT_CODE;
+  return activeInstruments.find(instrument => instrument.isActive)?.code ?? DEFAULT_INSTRUMENT_CODE;
+}
+
+export function buildInstrumentOptions(activeInstruments: Instrument[], selectedSymbol: string): Array<{ code: string; label: string }> {
+  const options = activeInstruments
+    .filter(instrument => instrument.isActive)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code))
+    .map(instrument => ({ code: instrument.code, label: `${instrument.code} — ${instrument.displayName}` }));
+
+  const normalizedSelectedSymbol = normalizeInstrumentCode(selectedSymbol);
+  if (normalizedSelectedSymbol && !options.some(option => option.code === normalizedSelectedSymbol)) {
+    return [{ code: normalizedSelectedSymbol, label: `${normalizedSelectedSymbol} — 保存済み銘柄` }, ...options];
+  }
+
+  return options;
+}

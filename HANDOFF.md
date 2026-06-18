@@ -35,3 +35,20 @@ Also verify Vercel direct route behavior after deployment for `/`, `/record`, `/
 - No environment variables are currently required.
 - No secrets were found in tracked project files during the repository scan.
 - Vercel deployment itself was not performed in this environment.
+
+## Instrument master update
+
+- Added a minimal IndexedDB-backed instrument master with an initial active `XAUUSD` instrument.
+- Trade entry now selects from active instruments sorted by `sortOrder`, while preserving legacy draft symbols as temporary options.
+- `AppSettings.defaultSymbol` remains the compatibility setting and is initialized or repaired to `XAUUSD` when missing or invalid.
+- Existing trade and draft `symbol` values are not rewritten during migration.
+
+## Validation performed for instrument work
+
+```bash
+npm test -- --run
+npm run lint
+npm run build
+```
+
+Note: installing `fake-indexeddb` was attempted for repository-level IndexedDB tests, but the registry returned `403 Forbidden`, so tests cover the pure selection/normalization behavior without adding a new dependency.

@@ -16,6 +16,20 @@ export type MistakeType = 'Entered far from level' | 'Entered in range center' |
 
 export type ChecklistStatus = 'Pass' | 'Fail' | 'Unclear' | 'Unanswered';
 
+export type InstrumentAssetClass = 'Metal' | 'FX' | 'Crypto' | 'Index' | 'Stock' | 'Other';
+
+export interface Instrument {
+  id: string;
+  schemaVersion: number;
+  code: string;
+  displayName: string;
+  assetClass: InstrumentAssetClass;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface EntryChecklistResult {
   isRelatedToFocusLine: ChecklistStatus;
   isNotRangeCenter: ChecklistStatus;
