@@ -7,7 +7,7 @@ Tenet is a personal trade-recording and review app. It focuses on trade planning
 Tenet currently supports:
 
 - A home dashboard with today's status, focus rules, draft/resume links, and recent trade records.
-- Trade planning and recording, including planned entry, stop loss, take profit, scenario notes, and entry checklist items.
+- Trade planning and recording, including instrument selection from a local master, planned entry, stop loss, take profit, scenario notes, and entry checklist items.
 - Trade detail and review flow for updating trade status, recording actual entry/exit prices, realized R, and rule violations.
 - Rule management, including initial rules, pinned rules, and up to three focus rules for the day.
 - Trade history with status filters.
@@ -96,6 +96,7 @@ If API integrations are added in the future, do not store secrets such as API ke
 Implemented:
 
 - Local IndexedDB persistence with Dexie.
+- Minimal instrument master initialization for the default XAUUSD instrument.
 - Initial trading rule setup and migration tracking.
 - Trade draft, plan confirmation, entry, close, review, skip, and cancel status flows.
 - Rule list, create/edit, pin, and focus-today controls.

@@ -1,5 +1,6 @@
 import { db } from './db';
 import { TradingRule } from '../types';
+import { instrumentRepository } from './InstrumentRepository';
 
 export const INITIAL_RULES = [
   {
@@ -154,7 +155,7 @@ export const INITIAL_RULES = [
   }
 ];
 
-export const TARGET_SCHEMA_VERSION = 4;
+export const TARGET_SCHEMA_VERSION = 5;
 
 export async function runMigrationsAndInit() {
   const migrations = await db.migrations.toArray();
@@ -333,6 +334,9 @@ export async function runMigrationsAndInit() {
         status: 'Success'
       });
     });
+    console.log("Migration 3 complete.");
+  }
+
   // Version 4 migration (English Translation)
   if (currentVersion < 4) {
     console.log("Migrating to Schema Version 4 (English)...");
@@ -454,6 +458,21 @@ export async function runMigrationsAndInit() {
     });
     console.log("Migration 4 complete.");
   }
-}
 
+  if (currentVersion < 5) {
+    console.log("Migrating to Schema Version 5 (Instruments)...");
+    const now = new Date().toISOString();
+    await instrumentRepository.ensureInitialInstruments();
+    await db.migrations.put({
+      id: crypto.randomUUID(),
+      schemaVersion: 5,
+      createdAt: now,
+      updatedAt: now,
+      executedAt: now,
+      status: 'Success'
+    });
+    console.log("Migration 5 complete.");
+  } else {
+    await instrumentRepository.ensureInitialInstruments();
+  }
 }
