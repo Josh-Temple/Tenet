@@ -1,73 +1,115 @@
-# TradeReview - 個人用トレード記録・振り返りアプリ プロトタイプ
+# Tenet
 
-このアプリケーションは、損益よりも「水平線を中心としたトレードのエントリー前計画、ルール順守、トレード後の評価」に重点を置いたトレード日誌のプロトタイプです。
+Tenet is a personal trade-recording and review app. It focuses on trade planning, rule checks, post-trade review, and daily journals so that traders can review decisions and rule adherence, not only profit and loss.
 
-## 起動方法
+## App overview
+
+Tenet currently supports:
+
+- A home dashboard with today's status, focus rules, draft/resume links, and recent trade records.
+- Trade planning and recording, including planned entry, stop loss, take profit, scenario notes, and entry checklist items.
+- Trade detail and review flow for updating trade status, recording actual entry/exit prices, realized R, and rule violations.
+- Rule management, including initial rules, pinned rules, and up to three focus rules for the day.
+- Trade history with status filters.
+- Basic analysis metrics for logged trades, review rate, rule compliance, skipped setups, total R, and average R.
+- Daily journal list and daily journal detail pages for pre-market planning and post-session reflection.
+
+Tenet is intentionally local-first. Its goal is to help review judgment quality, scenario discipline, and rule adherence in addition to outcome metrics.
+
+## Technology stack
+
+This repository currently uses:
+
+- React
+- TypeScript
+- Vite
+- React Router (`BrowserRouter`)
+- Dexie
+- IndexedDB
+- Tailwind CSS
+- dexie-react-hooks
+- date-fns
+- lucide-react
+- Vitest
+
+Version numbers are managed in `package.json` and `package-lock.json`.
+
+## Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 構成・技術スタック
+The Vite dev server is configured to listen on port `3000` and host `0.0.0.0`.
 
-*   **フロントエンド**: React 19, TypeScript, Vite
-*   **スタイリング**: Tailwind CSS v4 (モバイルファースト、ダークモード対応予定)
-*   **ルーティング**: React Router v6
-*   **ローカルDB**: Dexie.js (IndexedDBラッパー) - ページリロード後もデータは永続化されます。
-*   **アイコン**: Lucide React
-*   **日付処理**: date-fns
+## Checks, build, and tests
 
-## データ型と計算式
+```bash
+npm run lint
+npm run build
+npm test
+```
 
-主要なデータ型は `src/types/index.ts` に定義しています。
+- `npm run lint` runs TypeScript with `tsc --noEmit`.
+- `npm run build` creates the production build in `dist`.
+- `npm test` runs Vitest once with `vitest run`.
 
-### 計算式
-計算ロジックは `src/utils/calculations.ts` に単体テストと共に実装されています。
+## Vercel deployment
 
-*   **買いの実現R** = `(実際の決済価格 - 実際のエントリー価格) / |実際のエントリー価格 - 当初損切り価格|`
-*   **売りの実現R** = `(実際のエントリー価格 - 実際の決済価格) / |当初損切り価格 - 実際のエントリー価格|`
-*   **想定リスクリワード比** = 利益幅 / リスク幅 （ゼロ除算防止などのガードあり）
+Import the GitHub repository into Vercel with these settings:
 
-## 実装済みの最優先機能
+- Framework Preset: `Vite`
+- Root Directory: repository root
+- Install Command: standard npm install
+- Build Command: `npm run build`
+- Output Directory: `dist`
 
-1.  **ルール管理機能**:
-    *   初期ルールのIndexedDBへの自動ロード。
-    *   ルール一覧、編集、追加機能。
-    *   ピン留め機能と、今日の重点ルール指定機能。
-2.  **常時ルール確認**:
-    *   どの画面（ナビゲーション）からも、右上の「ルール確認」ボタンを1タップするだけで、画面遷移せずにすぐにルールを閲覧できます。
-    *   「重点ルール」はハイライトして一番上に表示されます。
-3.  **新規トレード計画と計算**:
-    *   エントリー予定価格、SL、TPの入力および整合性チェック。
-    *   想定リスクリワード比（RR）の自動計算。
-4.  **エントリー前チェックリスト**:
-    *   「レンジ中央ではないか」「シナリオはあるか」などのチェックボックス。
-    *   未確認項目がある場合の警告表示の可視化。
-5.  **データ保存**:
-    *   Dexie.js を用いた IndexedDB への永続化（ページ更新後も消えません）。
+This app uses React Router with `BrowserRouter`. The repository includes `vercel.json` so direct access or reloads for SPA routes such as `/history`, `/analysis`, `/journals`, `/journal/:dateParam`, and `/detail/:id` are rewritten to `/index.html` and then handled by React Router.
 
----
+Do not switch this app to `HashRouter` for Vercel deployment.
 
-## 今後の拡張候補 (TODO)
+## IndexedDB data notes
 
-### 決済後レビュー (トレード後レビュー)の実装
-*   現状は計画の保存（エントリー前）までをカバーしています。計画を決済済みに移行し、実際の決済価格と手数料を入力して「実現R」や「ルールの順守評価」「ミスの選択」を記録するフローを実装する。
+Tenet stores current app data in the browser's IndexedDB via Dexie.
 
-### 履歴と分析画面の補完
-*   `src/pages/History.tsx` : 保存した全トレードと見送り記録の一覧、フィルタリング表示。
-*   `src/pages/Analysis.tsx` : 成績やルール順守率などを条件別に集計して表示する。
-*   20件未満の場合の警告メッセージ。
+Important limitations:
 
-### 見送り記録
-*   エントリーしなかった判断もゼロRとして別枠で記録し、後で評価する機能。
+- Data is stored in the current browser only.
+- Data is not synced to a server or cloud database.
+- Data is not shared across different devices, browsers, or domains.
+- Vercel Production URLs and Preview URLs use separate browser storage areas.
+- Deleting browser site data may delete Tenet records.
+- For real records, use the stable Vercel Production URL instead of Preview URLs.
+- A backup/export feature is not currently implemented.
 
-### PWA対応とエクスポート
-*   `manifest.json` と Service Worker の登録をして、スマートフォンにインストールできるようにする。
-*   全データのJSONおよびCSVエクスポート・インポート機能 (`db.ts` から容易に拡張可能)。
+The current IndexedDB database name, table names, schema versions, migrations, and initial rule loading are part of the existing local data model and should not be changed for deployment-only work.
 
-### 画像の保存と圧縮
-*   エントリー前・決済後チャートのBlobとしてのIndexedDB保存。保存前の圧縮処理をCanvasAPI等で実装する。
+## Environment variables and secrets
 
-### ダークモードの完全対応
-*   全体のテーマを Tailwindの `dark:` セレクタに合わせる対応。
+Tenet currently does not require environment variables for local development or Vercel deployment.
+
+If API integrations are added in the future, do not store secrets such as API keys in client-side `VITE_` environment variables. Variables prefixed with `VITE_` can be included in the browser bundle. Secrets should be handled on a server side boundary such as Vercel Functions.
+
+## Current implementation status
+
+Implemented:
+
+- Local IndexedDB persistence with Dexie.
+- Initial trading rule setup and migration tracking.
+- Trade draft, plan confirmation, entry, close, review, skip, and cancel status flows.
+- Rule list, create/edit, pin, and focus-today controls.
+- Trade history list and status filtering.
+- Basic analysis cards.
+- Daily journal list and detail pages with pre-market and review fields.
+- Vercel SPA rewrite configuration for direct route access.
+
+Not currently implemented:
+
+- Cloud sync or server-side storage.
+- Authentication.
+- Gemini API or other AI integration.
+- Vercel Functions.
+- Backup/export/import.
+- PWA, service worker, notifications, or offline install support.
+- Advanced chart/image storage.

@@ -7,7 +7,7 @@ export class TradeRepository {
   }
 
   async getDraft(): Promise<Trade | undefined> {
-    return db.trades.where('status').equals('下書き').first();
+    return db.trades.where('status').equals('Draft').first();
   }
 
   async getById(id: string): Promise<Trade | undefined> {
@@ -23,15 +23,15 @@ export class TradeRepository {
   }
 
   async getPlanningTrades(): Promise<Trade[]> {
-    return db.trades.filter(t => t.status === '下書き' || t.status === '計画確定').toArray();
+    return db.trades.filter(t => t.status === 'Draft' || t.status === 'Plan Confirmed').toArray();
   }
 
   async getActiveTrades(): Promise<Trade[]> {
-    return db.trades.where('status').equals('エントリー済み').toArray();
+    return db.trades.where('status').equals('Entered').toArray();
   }
 
   async getReviewPendingTrades(): Promise<Trade[]> {
-    return db.trades.where('status').equals('決済済み').toArray();
+    return db.trades.where('status').equals('Closed').toArray();
   }
 
   async delete(id: string): Promise<void> {

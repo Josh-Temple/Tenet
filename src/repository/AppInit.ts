@@ -311,7 +311,7 @@ export async function runMigrationsAndInit() {
         createdAt: now,
         updatedAt: now,
         executedAt: now,
-        status: '成功'
+        status: 'Success'
       });
     });
     
@@ -330,7 +330,7 @@ export async function runMigrationsAndInit() {
         createdAt: now,
         updatedAt: now,
         executedAt: now,
-        status: '成功'
+        status: 'Success'
       });
     });
   // Version 4 migration (English Translation)
