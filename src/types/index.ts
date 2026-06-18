@@ -169,7 +169,7 @@ export type DailyJournalStatus = 'draft' | 'preMarketCompleted' | 'completed';
 export type DailyMarketCondition = 'Uptrend' | 'Downtrend' | 'Range' | 'Unclear';
 export type DailyPersonalCondition = 'Good' | 'Neutral' | 'Poor';
 export type DailyMarketAssessment = 'Accurate' | 'Partially Accurate' | 'Inaccurate' | 'Unclear';
-export type DailyRuleCompliance = 'Followed strictly' | 'Minor slip-up' | 'Failed to follow' | 'Cannot Evaluate';
+export type DailyRuleCompliance = 'Followed' | 'Partially Followed' | 'Did Not Follow' | 'Cannot Evaluate';
 
 export interface DailyJournal {
   id: string;
