@@ -37,7 +37,7 @@ export default function App() {
 
   if (error) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-50 p-6 text-center">
+      <div className="flex app-viewport items-center justify-center bg-zinc-50 p-6 text-center">
         <div className="text-zinc-600">
           <p className="mb-4 text-rose-500 font-medium">Initialization Error</p>
           <p>{error}</p>
@@ -48,7 +48,7 @@ export default function App() {
 
   if (!isReady) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-50">
+      <div className="flex app-viewport items-center justify-center bg-zinc-50">
         <div className="w-8 h-8 border-4 border-zinc-200 border-t-zinc-800 rounded-full animate-spin"></div>
       </div>
     );

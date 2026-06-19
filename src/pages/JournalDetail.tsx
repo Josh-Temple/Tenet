@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { dailyJournalRepository } from '../repository/DailyJournalRepository';
 import { db } from '../repository/db';
-import { DailyJournal, TradingRule, Trade } from '../types';
+import { DailyJournal, DailyMarketAssessment, DailyMarketCondition, DailyPersonalCondition, DailyRuleCompliance, TradingRule, Trade } from '../types';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { ChevronLeft, Edit2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { clsx } from 'clsx';
+import { getLocalDateKey } from '../utils/date';
+import { normalizeJournalSelections } from '../repository/JournalNormalization';
 
 export default function JournalDetail() {
   const { dateParam } = useParams<{ dateParam: string }>();
@@ -14,7 +16,7 @@ export default function JournalDetail() {
   const navigate = useNavigate();
   const autoOpenReview = searchParams.get('review') === '1';
 
-  const journalDate = dateParam === 'today' ? new Date().toISOString().split('T')[0] : dateParam || '';
+  const journalDate = dateParam === 'today' ? getLocalDateKey() : dateParam || '';
   
   const [journal, setJournal] = useState<Partial<DailyJournal>>({ journalDate });
   const [isLoaded, setIsLoaded] = useState(false);
@@ -29,7 +31,7 @@ export default function JournalDetail() {
   useEffect(() => {
     const loadData = async () => {
       // Load rules
-      const rules = await db.rules.where('isActive').equals('true').toArray();
+      const rules = (await db.rules.toArray()).filter(rule => rule.isActive);
       setActiveRules(rules);
 
       // Load journal
@@ -96,8 +98,8 @@ export default function JournalDetail() {
     return () => clearTimeout(saveTimer);
   }, [journal, isLoaded]); // Depends on journal state
 
-  const handleChange = (field: keyof DailyJournal, value: any) => {
-    setJournal(prev => ({ ...prev, [field]: value }));
+  const handleChange = <K extends keyof DailyJournal>(field: K, value: DailyJournal[K]) => {
+    setJournal(prev => normalizeJournalSelections({ ...prev, [field]: value }));
   };
 
   const toggleFocusRule = (id: string, section: 'pre' | 'post') => {
@@ -173,9 +175,9 @@ export default function JournalDetail() {
             <div className="space-y-2">
               <label className="block text-[10px] font-mono text-zinc-500 tracking-wider">Market Context Today</label>
               <div className="grid grid-cols-2 gap-2">
-                {['Uptrend', 'Downtrend', 'Range', 'Unclear'].map(opt => (
-                  <button key={opt} onClick={() => handleChange('marketCondition', opt)} className={clsx("py-2 px-3 text-xs rounded-lg border transition-colors", journal.marketCondition === opt ? "bg-violet-600 text-white border-violet-600" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300")}>
-                    {opt}
+                {MARKET_CONDITION_OPTIONS.map(({ value, label }) => (
+                  <button key={value} onClick={() => handleChange('marketCondition', value)} className={clsx("py-2 px-3 text-xs rounded-lg border transition-colors", journal.marketCondition === value ? "bg-violet-600 text-white border-violet-600" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300")}>
+                    {label}
                   </button>
                 ))}
               </div>
@@ -194,9 +196,9 @@ export default function JournalDetail() {
             <div className="space-y-2">
               <label className="block text-[10px] font-mono text-zinc-500 tracking-wider">My Condition Today</label>
               <div className="flex gap-2">
-                 {['Good', 'Normal', 'Bad'].map(opt => (
-                  <button key={opt} onClick={() => handleChange('personalCondition', opt)} className={clsx("flex-1 py-2 px-3 text-xs rounded-lg border transition-colors", journal.personalCondition === opt ? "bg-violet-600 text-white border-violet-600" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300")}>
-                    {opt}
+                 {PERSONAL_CONDITION_OPTIONS.map(({ value, label }) => (
+                  <button key={value} onClick={() => handleChange('personalCondition', value)} className={clsx("flex-1 py-2 px-3 text-xs rounded-lg border transition-colors", journal.personalCondition === value ? "bg-violet-600 text-white border-violet-600" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300")}>
+                    {label}
                   </button>
                 ))}
               </div>
@@ -310,9 +312,9 @@ export default function JournalDetail() {
               <div className="space-y-2">
                 <label className="block text-[10px] font-mono text-zinc-500 tracking-wider">Was my market bias accurate?</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {['Appropriate', 'Partially Appropriate', 'Inappropriate', 'Unclear'].map(opt => (
-                    <button key={opt} onClick={() => handleChange('marketAssessment', opt)} className={clsx("py-2 px-3 text-xs rounded-lg border transition-colors", journal.marketAssessment === opt ? "bg-violet-600 text-white border-violet-600" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300")}>
-                      {opt}
+                  {MARKET_ASSESSMENT_OPTIONS.map(({ value, label }) => (
+                    <button key={value} onClick={() => handleChange('marketAssessment', value)} className={clsx("py-2 px-3 text-xs rounded-lg border transition-colors", journal.marketAssessment === value ? "bg-violet-600 text-white border-violet-600" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300")}>
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -331,9 +333,9 @@ export default function JournalDetail() {
               <div className="space-y-2">
                 <label className="block text-[10px] font-mono text-zinc-500 tracking-wider">Did I follow my focus rules?</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {['Followed', 'Partially Followed', 'Did Not Follow', 'Cannot Evaluate'].map(opt => (
-                    <button key={opt} onClick={() => handleChange('focusRuleCompliance', opt)} className={clsx("py-2 px-3 text-xs rounded-lg border transition-colors", journal.focusRuleCompliance === opt ? "bg-violet-600 text-white border-violet-600" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300")}>
-                      {opt}
+                  {RULE_COMPLIANCE_OPTIONS.map(({ value, label }) => (
+                    <button key={value} onClick={() => handleChange('focusRuleCompliance', value)} className={clsx("py-2 px-3 text-xs rounded-lg border transition-colors", journal.focusRuleCompliance === value ? "bg-violet-600 text-white border-violet-600" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300")}>
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -411,3 +413,17 @@ export default function JournalDetail() {
     </div>
   );
 }
+
+
+const MARKET_CONDITION_OPTIONS: Array<{ value: DailyMarketCondition; label: string }> = [
+  { value: 'Uptrend', label: '上昇傾向' }, { value: 'Downtrend', label: '下降傾向' }, { value: 'Range', label: 'レンジ' }, { value: 'Unclear', label: '不明' },
+];
+const PERSONAL_CONDITION_OPTIONS: Array<{ value: DailyPersonalCondition; label: string }> = [
+  { value: 'Good', label: '良好' }, { value: 'Neutral', label: '普通' }, { value: 'Poor', label: '不調' },
+];
+const MARKET_ASSESSMENT_OPTIONS: Array<{ value: DailyMarketAssessment; label: string }> = [
+  { value: 'Accurate', label: '正確' }, { value: 'Partially Accurate', label: '一部正確' }, { value: 'Inaccurate', label: '不正確' }, { value: 'Unclear', label: '不明' },
+];
+const RULE_COMPLIANCE_OPTIONS: Array<{ value: DailyRuleCompliance; label: string }> = [
+  { value: 'Followed', label: '守れた' }, { value: 'Partially Followed', label: '一部守れた' }, { value: 'Did Not Follow', label: '守れなかった' }, { value: 'Cannot Evaluate', label: '評価不能' },
+];

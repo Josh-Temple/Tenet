@@ -1,5 +1,6 @@
 import { db } from './db';
 import { DailyJournal, DailyJournalStatus } from '../types';
+import { normalizeJournalSelections } from './JournalNormalization';
 
 export class DailyJournalRepository {
   async getJournalByDate(date: string): Promise<DailyJournal | undefined> {
@@ -11,12 +12,13 @@ export class DailyJournalRepository {
   }
 
   async createOrUpdateDraft(journalData: Partial<DailyJournal> & { journalDate: string }): Promise<DailyJournal> {
+    const normalizedJournalData = normalizeJournalSelections(journalData);
     const existing = await this.getJournalByDate(journalData.journalDate);
     
     if (existing) {
       const updated = {
         ...existing,
-        ...journalData,
+        ...normalizedJournalData,
         updatedAt: new Date().toISOString()
       };
       await db.dailyJournals.put(updated);
@@ -43,7 +45,7 @@ export class DailyJournalRepository {
         updatedAt: new Date().toISOString(),
         preMarketCompletedAt: null,
         completedAt: null,
-        ...journalData
+        ...normalizedJournalData
       };
       await db.dailyJournals.add(newJournal);
       return newJournal;

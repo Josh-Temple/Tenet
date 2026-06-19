@@ -15,8 +15,9 @@ export class TradeReviewDatabase extends Dexie {
     // Schema version 1: Original
     // Schema version 2: Added migrations, updated Trade / Rule structures
     // Schema version 3: Added dailyJournals
-    // Schema version 4: Added instruments
-    this.version(4).stores({
+    // Schema version 4: English value migration
+    // Schema version 5: Added instruments and data integrity cleanup
+    this.version(5).stores({
       trades: 'id, date, symbol, direction, status, createdAt',
       rules: 'id, isActive, isPinned, isFocusToday, displayOrder, category',
       ruleLogs: 'id, date',

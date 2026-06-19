@@ -13,6 +13,7 @@ export default function TradeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [trade, setTrade] = useState<Trade | null>(null);
+  const [loadState, setLoadState] = useState<'loading' | 'found' | 'notFound' | 'error'>('loading');
 
   // Review states
   const [actualEntryPrice, setActualEntryPrice] = useState('');
@@ -26,8 +27,10 @@ export default function TradeDetail() {
 
   useEffect(() => {
     if (id) {
+      setLoadState('loading');
       db.trades.get(id).then(t => {
         if (t) {
+          setLoadState('found');
           setTrade(t);
           if (t.review) {
             setActualEntryPrice(t.review.actualEntryPrice?.toString() || '');
@@ -35,8 +38,12 @@ export default function TradeDetail() {
             setReviewNextConcreteAction(t.review.reviewNextConcreteAction || '');
             setViolations(t.review.violations || []);
           }
+        } else {
+          setLoadState('notFound');
         }
-      });
+      }).catch(() => setLoadState('error'));
+    } else {
+      setLoadState('notFound');
     }
   }, [id]);
 
@@ -50,7 +57,19 @@ export default function TradeDetail() {
     setViolations(violations.filter(v => v.ruleId !== ruleId));
   };
 
-  if (!trade) return <div className="p-8 text-center text-sm font-mono text-zinc-400">Loading...</div>;
+  if (loadState === 'loading') return <div className="p-8 text-center text-sm font-mono text-zinc-400">Loading...</div>;
+  if (loadState === 'notFound' || loadState === 'error' || !trade) {
+    return (
+      <div className="p-8 text-center space-y-5">
+        <h1 className="text-xl font-medium text-zinc-900">記録が見つかりません</h1>
+        <p className="text-sm text-zinc-500">指定されたトレード記録は存在しないか、削除されています。</p>
+        <div className="flex gap-3 justify-center">
+          <button onClick={() => navigate('/history')} className="px-4 py-2 text-xs font-mono bg-zinc-900 text-white rounded-lg">履歴へ戻る</button>
+          <button onClick={() => navigate('/')} className="px-4 py-2 text-xs font-mono border border-zinc-200 rounded-lg">ホームへ戻る</button>
+        </div>
+      </div>
+    );
+  }
 
   const updateStatus = async (newStatus: TradeStatus) => {
     await db.trades.update(trade.id, { status: newStatus, updatedAt: new Date().toISOString() });
@@ -78,11 +97,11 @@ export default function TradeDetail() {
         fees: null,
         realizedR: rR,
         evaluationAnalysis: 'Unclear',
-        evaluationEntryPosition: 'Acceptable',
-        evaluationStopLoss: 'As Planned',
-        evaluationTakeProfit: 'As Planned',
-        evaluationOverall: 'Acceptable Trade',
-        ruleComplianceLevel: violations.length === 0 ? 'Perfect Compliance' : violations.length <= 1 ? 'Minor Violation' : 'Major Violation',
+        evaluationEntryPosition: 'Not Evaluated',
+        evaluationStopLoss: 'Not Evaluated',
+        evaluationTakeProfit: 'Not Evaluated',
+        evaluationOverall: 'Not Evaluated',
+        ruleComplianceLevel: 'Not Evaluated',
         violations,
         reviewGoodPoints: '',
         reviewImprovementPoints: '',
