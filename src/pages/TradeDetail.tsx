@@ -76,6 +76,12 @@ export default function TradeDetail() {
     setTrade({ ...trade, status: newStatus });
   };
 
+  const handleCancelPlan = async () => {
+    const confirmed = window.confirm('Cancel this trade plan? The record will be kept with Cancelled status.');
+    if (!confirmed) return;
+    await updateStatus('Cancelled');
+  };
+
   const handleSaveReview = async () => {
     const rR = calculateRealizedR(
       trade.direction,
@@ -186,9 +192,10 @@ export default function TradeDetail() {
       </section>
 
       {trade.status === 'Plan Confirmed' && (
-          <div className="flex gap-3">
-              <button onClick={() => updateStatus('Entered')} className="flex-1 bg-zinc-900 hover:bg-violet-600 text-white py-4 rounded-xl text-sm font-medium transition-colors">Entered Trade</button>
-              <button onClick={() => updateStatus('Skipped')} className="flex-1 bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50 py-4 rounded-xl text-sm font-medium transition-colors">Skip</button>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <button onClick={() => updateStatus('Entered')} className="bg-zinc-900 hover:bg-violet-600 text-white py-4 rounded-xl text-sm font-medium transition-colors sm:col-span-1">Entered Trade</button>
+              <button onClick={() => updateStatus('Skipped')} className="bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50 py-4 rounded-xl text-sm font-medium transition-colors sm:col-span-1">Skip</button>
+              <button onClick={handleCancelPlan} className="bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 py-4 rounded-xl text-sm font-medium transition-colors sm:col-span-1">Cancel Plan</button>
           </div>
       )}
 

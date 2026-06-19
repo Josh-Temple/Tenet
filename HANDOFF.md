@@ -63,3 +63,8 @@ Note: installing `fake-indexeddb` was attempted for repository-level IndexedDB t
 - Added not-found/error handling for `/detail/:id` so missing trade IDs do not leave the page in a permanent loading state.
 - Review save now uses `Not Evaluated` defaults instead of optimistic positive review values when no explicit review UI exists.
 - Vercel Preview verification was not performed in this environment.
+
+## Trade plan cancellation
+
+- Added a `Cancel Plan` action on confirmed trade plans.
+- Cancelling keeps the existing trade record and updates `Trade.status` to `Cancelled` instead of deleting data, preserving compatibility with history and future export/analysis work.
