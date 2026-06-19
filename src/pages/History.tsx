@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../repository/db';
 import { TradeStatus } from '../types';
+import { buildTradeExportFileName, createTradeExportBlob, TradeExportFormat } from '../utils/tradeExport';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import { Filter } from 'lucide-react';
+import { Download, Filter } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -13,6 +14,7 @@ export default function History() {
   const [searchParams] = useSearchParams();
   const [filterStatus, setFilterStatus] = useState<TradeStatus | 'ALL'>('ALL');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const statusParam = searchParams.get('status');
@@ -38,6 +40,26 @@ export default function History() {
 
   const STALE_STATUSES: TradeStatus[] = ['Plan Confirmed', 'Entered', 'Closed', 'Reviewed', 'Skipped', 'Cancelled'];
 
+  const handleExport = async (format: TradeExportFormat) => {
+    const exportTrades = (await db.trades.orderBy('createdAt').reverse().toArray()).filter((trade) => trade.status !== 'Draft');
+
+    if (exportTrades.length === 0) {
+      setExportMessage('No trade records to export yet.');
+      return;
+    }
+
+    const blob = createTradeExportBlob(exportTrades, format);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = buildTradeExportFileName(format);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setExportMessage(`Exported ${exportTrades.length} trade records as ${format.toUpperCase()}.`);
+  };
+
   return (
     <div className="space-y-6 pb-8">
       <header className="flex justify-between items-end">
@@ -45,16 +67,49 @@ export default function History() {
           <h1 className="text-2xl font-medium tracking-tight text-zinc-900">Trade History</h1>
           <p className="text-xs text-zinc-500 font-light">Past records and current status</p>
         </div>
-        <button 
-           onClick={() => setIsFilterOpen(!isFilterOpen)}
-           className={clsx("p-2 -mr-2 transition-colors hover:text-violet-600", isFilterOpen || filterStatus !== 'ALL' ? 'text-violet-600' : 'text-zinc-400')}
-        >
-          <Filter size={20} strokeWidth={1.5} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+             onClick={() => handleExport('csv')}
+             className="p-2 transition-colors text-zinc-400 hover:text-violet-600"
+             aria-label="Export trades as CSV"
+             title="Export CSV"
+          >
+            <Download size={20} strokeWidth={1.5} />
+          </button>
+          <button 
+             onClick={() => setIsFilterOpen(!isFilterOpen)}
+             className={clsx("p-2 -mr-2 transition-colors hover:text-violet-600", isFilterOpen || filterStatus !== 'ALL' ? 'text-violet-600' : 'text-zinc-400')}
+             aria-label="Filter trade history"
+          >
+            <Filter size={20} strokeWidth={1.5} />
+          </button>
+        </div>
       </header>
 
+      {exportMessage && (
+        <p className="rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-xs text-violet-700">{exportMessage}</p>
+      )}
+
       {isFilterOpen && (
-        <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100 flex flex-wrap gap-2 animate-in fade-in zoom-in-95 duration-200">
+        <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] uppercase font-mono tracking-widest text-zinc-400">Export all saved records</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleExport('csv')}
+                className="text-[11px] px-3 py-1.5 rounded-full transition-colors border bg-white border-zinc-200 text-zinc-600 hover:border-violet-300 hover:text-violet-600"
+              >
+                CSV
+              </button>
+              <button
+                onClick={() => handleExport('json')}
+                className="text-[11px] px-3 py-1.5 rounded-full transition-colors border bg-white border-zinc-200 text-zinc-600 hover:border-violet-300 hover:text-violet-600"
+              >
+                JSON
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
           <button 
              onClick={() => setFilterStatus('ALL')}
              className={clsx("text-[11px] px-3 py-1.5 rounded-full transition-colors", filterStatus === 'ALL' ? "bg-violet-600 text-white" : "bg-white border text-zinc-600 hover:border-zinc-300")}
@@ -70,6 +125,7 @@ export default function History() {
                {s}
              </button>
           ))}
+          </div>
         </div>
       )}
 
