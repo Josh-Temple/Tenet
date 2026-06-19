@@ -10,12 +10,13 @@ export type SetupType = 'Pullback Buy (Uptrend)' | 'Pullback Sell (Downtrend)' |
 export type HorizontalLineType = 'Clear Swing High' | 'Clear Swing Low' | 'Previous Day High' | 'Previous Day Low' | 'Range High' | 'Range Low' | 'Origin of Higher High' | 'Origin of Lower Low' | 'Breakout Retest Level' | 'Origin of Sharp Move' | 'Other';
 export type AuxiliaryCondition = 'Aligned with HTF' | 'Clear Rejection at Level' | 'Failed to Break High/Low' | 'LTF Structure Shift' | 'Retest after Breakout' | 'Swing Failure Pattern' | 'Liquidity Grab' | 'Overlap with FVG' | 'Overlap with Order Block' | 'Volatility Expansion' | 'Other';
 
-export type RuleComplianceLevel = 'Perfect Compliance' | 'Minor Violation' | 'Major Violation' | 'Cannot Evaluate';
+export type RuleComplianceLevel = 'Perfect Compliance' | 'Minor Violation' | 'Major Violation' | 'Cannot Evaluate' | 'Not Evaluated';
 
 export type MistakeType = 'Entered far from level' | 'Entered in range center' | 'Did not wait for confirmation' | 'Chased sudden move' | 'Widened Stop Loss' | 'Took Profit too early' | 'Insufficient R:R' | 'Traded against HTF' | 'Entered before news' | 'Increased position size after loss' | 'Overtrading' | 'FOMO Entry' | 'Traded outside scenario' | 'Post-rationalized entry' | 'Other';
 
 export type ChecklistStatus = 'Pass' | 'Fail' | 'Unclear' | 'Unanswered';
 
+export type AssetClass = 'Metal' | 'FX' | 'Crypto' | 'Index' | 'Stock' | 'Other';
 export type InstrumentAssetClass = 'Metal' | 'FX' | 'Crypto' | 'Index' | 'Stock' | 'Other';
 
 export interface Instrument {
@@ -74,7 +75,14 @@ export interface TradePlan {
 
   entryCheckList: EntryChecklistResult;
   entryCheckWarningAcknowledged?: boolean;
+  entryCheckWarningAcknowledgedAt?: string;
+  entryCheckWarningIssues?: {
+    failItems: string[];
+    unclearItems: string[];
+    unansweredItems: string[];
+  };
 }
+
 
 export interface TradeReview {
   actualEntryPrice: number | null;
@@ -85,10 +93,10 @@ export interface TradeReview {
   realizedR: number | null;
 
   evaluationAnalysis: 'Accurate' | 'Partially Accurate' | 'Inaccurate' | 'Unclear';
-  evaluationEntryPosition: 'Good' | 'Acceptable' | 'Early' | 'Late' | 'Should not have entered';
-  evaluationStopLoss: 'As Planned' | 'Too Tight' | 'Too Wide' | 'Widened Later' | 'Unclear Logic';
-  evaluationTakeProfit: 'As Planned' | 'Too Early' | 'Too Late' | 'Unrealistic Target' | 'Changed Arbitrarily';
-  evaluationOverall: 'Good Trade' | 'Acceptable Trade' | 'Needs Improvement' | 'Should not have executed';
+  evaluationEntryPosition: 'Good' | 'Acceptable' | 'Early' | 'Late' | 'Should not have entered' | 'Not Evaluated';
+  evaluationStopLoss: 'As Planned' | 'Too Tight' | 'Too Wide' | 'Widened Later' | 'Unclear Logic' | 'Not Evaluated';
+  evaluationTakeProfit: 'As Planned' | 'Too Early' | 'Too Late' | 'Unrealistic Target' | 'Changed Arbitrarily' | 'Not Evaluated';
+  evaluationOverall: 'Good Trade' | 'Acceptable Trade' | 'Needs Improvement' | 'Should not have executed' | 'Not Evaluated';
 
   ruleComplianceLevel: RuleComplianceLevel;
   violations: RuleViolation[];

@@ -26,3 +26,19 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-zinc-400;
 }
+
+
+@layer utilities {
+  .app-viewport {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pb-bottom-nav {
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+  }
+}

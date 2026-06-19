@@ -52,3 +52,14 @@ npm run build
 ```
 
 Note: installing `fake-indexeddb` was attempted for repository-level IndexedDB tests, but the registry returned `403 Forbidden`, so tests cover the pure selection/normalization behavior without adding a new dependency.
+
+## Core data integrity and mobile navigation stabilization
+
+- Switched the app shell to dynamic viewport sizing and fixed bottom navigation with explicit safe-area padding, plus content bottom padding to avoid overlap on mobile browsers.
+- Added `getLocalDateKey()` and replaced UTC ISO date-key generation for today journals, drafts, plan confirmation, and rule review logs.
+- Added journal selection normalization so legacy `Normal`/`Bad`/`Appropriate`/legacy compliance values are migrated or sanitized to the English enum values.
+- Added trade factory helpers for consistent draft/plan structure, checklist issue capture, memo placement, local date keys, symbol normalization, and `createdAt` preservation.
+- Added migration version 5 cleanup for instrument initialization, journal normalization, and copying legacy `freeMemo` into `entryCheckList.stopLossLogicMemo` without deleting existing data.
+- Added not-found/error handling for `/detail/:id` so missing trade IDs do not leave the page in a permanent loading state.
+- Review save now uses `Not Evaluated` defaults instead of optimistic positive review values when no explicit review UI exists.
+- Vercel Preview verification was not performed in this environment.

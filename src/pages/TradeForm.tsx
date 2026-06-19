@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../repository/db';
-import { TradeDirection, ChecklistStatus, Instrument } from '../types';
+import { Trade, TradeDirection, ChecklistStatus, Instrument } from '../types';
 import { checkEntryPriceConsistency, calculateExpectedRiskReward } from '../utils/calculations';
 import { AlertCircle, FileEdit } from 'lucide-react';
 import { clsx } from 'clsx';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_INSTRUMENT_CODE, instrumentRepository, normalizeInstrumentCode } from '../repository/InstrumentRepository';
+import { getLocalDateKey } from '../utils/date';
+import { copyChecksToEntryChecklist, createDraftTrade, getChecklistIssues, hasProblematicChecklist } from '../repository/TradeFactory';
 
 export default function TradeForm() {
   const navigate = useNavigate();
@@ -70,8 +72,8 @@ export default function TradeForm() {
              isInScenario: draft.plan.entryCheckList.isInScenario,
            });
         }
-        setStopLossLogicMemo(draft.plan?.freeMemo || '');
-        setScenarioMemo(draft.plan?.basicScenario || '');
+        setStopLossLogicMemo(draft.plan?.entryCheckList?.stopLossLogicMemo || draft.plan?.freeMemo || '');
+        setScenarioMemo(draft.plan?.entryCheckList?.scenarioMemo || draft.plan?.basicScenario || '');
       }
       if (mounted) setIsInitializing(false);
     };
@@ -81,37 +83,31 @@ export default function TradeForm() {
 
   const saveDraft = async () => {
     if (isInitializing) return;
-    
-    // Check if we have anything to save (at least one field edited)
-    const normalizedSymbol = normalizeInstrumentCode(symbol);
-    if (!normalizedSymbol && !entryPrice && !stopLoss && !takeProfit && Object.values(checks).every(v => v === 'Unanswered') && !stopLossLogicMemo && !scenarioMemo) {
-       return; 
+    const normalizedSymbol = normalizeInstrumentCode(symbol) || DEFAULT_INSTRUMENT_CODE;
+    if (!entryPrice && !stopLoss && !takeProfit && Object.values(checks).every(v => v === 'Unanswered') && !stopLossLogicMemo && !scenarioMemo && normalizedSymbol === DEFAULT_INSTRUMENT_CODE) {
+       return;
     }
 
-    const tradeData: any = {
+    const existing = await db.trades.get(tradeId);
+    const tradeData = createDraftTrade({
       id: tradeId,
-      schemaVersion: 4,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      date: new Date().toISOString().split('T')[0],
       symbol: normalizedSymbol,
-      direction: direction,
-      session: 'Tokyo',
-      status: 'Draft',
+      direction,
+      existing,
+      date: existing?.date ?? getLocalDateKey(),
       plan: {
         plannedEntryPrice: parseFloat(entryPrice) || null,
         plannedStopLoss: parseFloat(stopLoss) || null,
         plannedTakeProfit: parseFloat(takeProfit) || null,
-        setupType: 'Other',
-        horizontalLineType: 'Other',
         basicScenario: scenarioMemo,
-        freeMemo: stopLossLogicMemo,
-        entryCheckList: checks,
-        entryCheckWarningAcknowledged: false,
+        freeMemo: existing?.plan?.freeMemo || '',
+        entryCheckList: copyChecksToEntryChecklist(checks, stopLossLogicMemo, scenarioMemo),
+        entryCheckWarningAcknowledged: existing?.plan?.entryCheckWarningAcknowledged ?? false,
+        entryCheckWarningAcknowledgedAt: existing?.plan?.entryCheckWarningAcknowledgedAt,
+        entryCheckWarningIssues: existing?.plan?.entryCheckWarningIssues,
       }
-    };
+    });
 
-    // Replace if exists, else create
     await db.trades.put(tradeData);
     setLastSaved(new Date());
   };
@@ -128,50 +124,43 @@ export default function TradeForm() {
   };
 
   const handleCommitPlan = async () => {
-    const issueKeys = Object.entries(checks).filter(([, v]) => v === 'Fail' || v === 'Unclear');
-    const unansweredKeys = Object.entries(checks).filter(([, v]) => v === 'Unanswered');
-
-    if (unansweredKeys.length > 0) {
-       alert('There are unanswered checklist items. Please fill all fields.');
-       return;
-    }
-
     let warningAcknowledged = false;
-    if (issueKeys.length > 0) {
-      const confirmed = window.confirm('Some answers indicate "Fail" or "Unclear" conditions.\nThis suggests a high-uncertainty trade.\nAre you sure you want to confirm this plan?');
+    let warningAcknowledgedAt: string | undefined;
+    const issues = getChecklistIssues(checks);
+
+    if (hasProblematicChecklist(checks)) {
+      const confirmed = window.confirm('Checklist has Fail, Unclear, or Unanswered items.\nReturn to review if you want to complete them.\nChoose OK to record the issues and confirm this plan.');
       if (!confirmed) return;
       warningAcknowledged = true;
+      warningAcknowledgedAt = new Date().toISOString();
     }
 
-    const normalizedSymbol = normalizeInstrumentCode(symbol);
+    const normalizedSymbol = normalizeInstrumentCode(symbol) || DEFAULT_INSTRUMENT_CODE;
     if (!normalizedSymbol || normalizedSymbol === 'UNSET') {
       alert('Please select a valid symbol.');
       return;
     }
 
-    const existingId = tradeId;
-    const tradeData: any = {
-      id: existingId,
-      schemaVersion: 4,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      date: new Date().toISOString().split('T')[0],
+    const existing = await db.trades.get(tradeId);
+    const draft = createDraftTrade({
+      id: tradeId,
       symbol: normalizedSymbol,
-      direction: direction,
-      session: 'Tokyo',
-      status: 'Plan Confirmed',
+      direction,
+      existing,
+      date: existing?.date ?? getLocalDateKey(),
       plan: {
         plannedEntryPrice: parseFloat(entryPrice) || null,
         plannedStopLoss: parseFloat(stopLoss) || null,
         plannedTakeProfit: parseFloat(takeProfit) || null,
-        setupType: 'Other',
-        horizontalLineType: 'Other',
         basicScenario: scenarioMemo,
-        freeMemo: stopLossLogicMemo,
-        entryCheckList: checks,
+        freeMemo: existing?.plan?.freeMemo || '',
+        entryCheckList: copyChecksToEntryChecklist(checks, stopLossLogicMemo, scenarioMemo),
         entryCheckWarningAcknowledged: warningAcknowledged,
+        entryCheckWarningAcknowledgedAt: warningAcknowledgedAt,
+        entryCheckWarningIssues: warningAcknowledged ? issues : undefined,
       }
-    };
+    });
+    const tradeData: Trade = { ...draft, status: 'Plan Confirmed' };
     await db.trades.put(tradeData);
     navigate('/');
   };

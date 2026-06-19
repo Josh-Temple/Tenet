@@ -1,6 +1,7 @@
 import { db } from './db';
 import { TradingRule } from '../types';
 import { instrumentRepository } from './InstrumentRepository';
+import { normalizeJournalSelections } from './JournalNormalization';
 
 export const INITIAL_RULES = [
   {
@@ -378,7 +379,8 @@ export async function runMigrationsAndInit() {
         '上昇傾向': 'Uptrend', '下降傾向': 'Downtrend',
         '良好': 'Good', '普通': 'Neutral', '不調': 'Poor',
         '適切だった': 'Accurate', '一部適切だった': 'Partially Accurate', '適切ではなかった': 'Inaccurate',
-        '守れた': 'Followed strictly', '一部守れなかった': 'Minor slip-up', '守れなかった': 'Failed to follow', '評価できない': 'Cannot Evaluate'
+        '守れた': 'Followed', '一部守れなかった': 'Partially Followed', '守れなかった': 'Did Not Follow', '評価できない': 'Cannot Evaluate'
+        , 'Normal': 'Neutral', 'Bad': 'Poor', 'Appropriate': 'Accurate', 'Partially Appropriate': 'Partially Accurate', 'Inappropriate': 'Inaccurate', 'Followed strictly': 'Followed', 'Minor slip-up': 'Partially Followed', 'Failed to follow': 'Did Not Follow', 'UNSET': 'XAUUSD'
       };
       return map[val] || val;
     };
@@ -440,6 +442,8 @@ export async function runMigrationsAndInit() {
         if (journal.personalCondition) { journal.personalCondition = t(journal.personalCondition); updated = true; }
         if (journal.marketAssessment) { journal.marketAssessment = t(journal.marketAssessment); updated = true; }
         if (journal.focusRuleCompliance) { journal.focusRuleCompliance = t(journal.focusRuleCompliance); updated = true; }
+        const normalizedJournal = normalizeJournalSelections(journal);
+        Object.assign(journal, normalizedJournal);
 
         if (updated) {
           journal.schemaVersion = 4;
@@ -462,14 +466,40 @@ export async function runMigrationsAndInit() {
   if (currentVersion < 5) {
     console.log("Migrating to Schema Version 5 (Instruments)...");
     const now = new Date().toISOString();
-    await instrumentRepository.ensureInitialInstruments();
-    await db.migrations.put({
+    await db.transaction('rw', [db.trades, db.dailyJournals, db.instruments, db.settings, db.migrations], async () => {
+      const trades = await db.trades.toArray();
+      for (const trade of trades) {
+        let changed = false;
+        if (trade.plan?.freeMemo && trade.plan.entryCheckList && !trade.plan.entryCheckList.stopLossLogicMemo) {
+          trade.plan.entryCheckList.stopLossLogicMemo = trade.plan.freeMemo;
+          changed = true;
+        }
+        if (trade.plan?.basicScenario && trade.plan.entryCheckList && !trade.plan.entryCheckList.scenarioMemo) {
+          trade.plan.entryCheckList.scenarioMemo = trade.plan.basicScenario;
+          changed = true;
+        }
+        if (changed) {
+          trade.schemaVersion = 5;
+          trade.updatedAt = now;
+          await db.trades.put(trade);
+        }
+      }
+      const journals = await db.dailyJournals.toArray();
+      for (const journal of journals) {
+        const normalized = normalizeJournalSelections(journal);
+        if (normalized.personalCondition !== journal.personalCondition || normalized.marketAssessment !== journal.marketAssessment || normalized.focusRuleCompliance !== journal.focusRuleCompliance) {
+          await db.dailyJournals.put({ ...journal, ...normalized, schemaVersion: 5, updatedAt: now });
+        }
+      }
+      await instrumentRepository.ensureInitialInstruments();
+      await db.migrations.put({
       id: crypto.randomUUID(),
       schemaVersion: 5,
       createdAt: now,
       updatedAt: now,
       executedAt: now,
-      status: 'Success'
+        status: 'Success'
+      });
     });
     console.log("Migration 5 complete.");
   } else {

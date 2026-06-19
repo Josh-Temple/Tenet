@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { X, ArrowRight } from 'lucide-react';
 import { db } from '../../repository/db';
+import { getLocalDateKey } from '../../utils/date';
 import { clsx } from 'clsx';
 import { TradingRule } from '../../types';
 
@@ -20,7 +21,7 @@ export function RuleQuickModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
            createdAt: new Date().toISOString(),
            updatedAt: new Date().toISOString(),
            openedFromScreen: 'QuickModal',
-           date: new Date().toISOString().split('T')[0],
+           date: getLocalDateKey(),
            checkedAt: new Date().toISOString(),
            focusedRuleIds: []
          });

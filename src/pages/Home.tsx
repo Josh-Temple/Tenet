@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 
 import { Trade } from '../types';
+import { getLocalDateKey } from '../utils/date';
 
 function RecentTradeItem({ trade, onClick }: { trade: Trade; onClick: () => void }) {
   return (
@@ -40,7 +41,7 @@ export default function Home() {
   const rules = useLiveQuery(() => db.rules.toArray());
   const trades = useLiveQuery(() => db.trades.orderBy('createdAt').reverse().toArray());
   
-  const todayDateStr = new Date().toISOString().split('T')[0];
+  const todayDateStr = getLocalDateKey();
   const todayJournal = useLiveQuery(() => db.dailyJournals.where('journalDate').equals(todayDateStr).first());
 
   const focusRules = rules?.filter(r => r.isFocusToday && r.isActive) || [];
