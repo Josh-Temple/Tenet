@@ -68,3 +68,11 @@ Note: installing `fake-indexeddb` was attempted for repository-level IndexedDB t
 
 - Added a `Cancel Plan` action on confirmed trade plans.
 - Cancelling keeps the existing trade record and updates `Trade.status` to `Cancelled` instead of deleting data, preserving compatibility with history and future export/analysis work.
+
+## Trade record export
+
+- Added Trade History export controls for all non-draft trade records.
+- The header download button exports CSV immediately; the filter panel also exposes CSV and JSON export buttons.
+- CSV export flattens core plan/review fields for spreadsheet use and escapes comma/newline/quote content.
+- JSON export keeps the full trade object structure with an `exportedAt` timestamp for structured backup/review workflows.
+- Draft records remain excluded from exports to match the default history feed's saved-record behavior.

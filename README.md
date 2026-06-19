@@ -10,7 +10,7 @@ Tenet currently supports:
 - Trade planning and recording, including instrument selection from a local master, planned entry, stop loss, take profit, scenario notes, and entry checklist items.
 - Trade detail and review flow for updating trade status, recording actual entry/exit prices, realized R, and rule violations.
 - Rule management, including initial rules, pinned rules, and up to three focus rules for the day.
-- Trade history with status filters.
+- Trade history with status filters and CSV/JSON trade-record exports.
 - Basic analysis metrics for logged trades, review rate, rule compliance, skipped setups, total R, and average R.
 - Daily journal list and daily journal detail pages for pre-market planning and post-session reflection.
 
@@ -81,7 +81,7 @@ Important limitations:
 - Vercel Production URLs and Preview URLs use separate browser storage areas.
 - Deleting browser site data may delete Tenet records.
 - For real records, use the stable Vercel Production URL instead of Preview URLs.
-- A backup/export feature is not currently implemented.
+- Trade records can be exported from the Trade History screen as CSV for spreadsheets or JSON for structured backups.
 
 The current IndexedDB database name, table names, schema versions, migrations, and initial rule loading are part of the existing local data model and should not be changed for deployment-only work.
 
@@ -100,7 +100,7 @@ Implemented:
 - Initial trading rule setup and migration tracking.
 - Trade draft, plan confirmation, entry, close, review, skip, and cancel status flows.
 - Rule list, create/edit, pin, and focus-today controls.
-- Trade history list and status filtering.
+- Trade history list, status filtering, and trade-record export downloads.
 - Basic analysis cards.
 - Daily journal list and detail pages with pre-market and review fields.
 - Vercel SPA rewrite configuration for direct route access.
@@ -111,6 +111,6 @@ Not currently implemented:
 - Authentication.
 - Gemini API or other AI integration.
 - Vercel Functions.
-- Backup/export/import.
+- Import/restore from exported files.
 - PWA, service worker, notifications, or offline install support.
 - Advanced chart/image storage.
